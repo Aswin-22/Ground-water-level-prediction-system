@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import logo from "../assets/ecology.png";
 
 function Form() {
   const [formData, setFormData] = useState({
@@ -42,72 +43,75 @@ function Form() {
   };
 
   return (
-    <div>
-      <h1>Groundwater Level Predictor</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          State:
-          <input
-            type="text"
-            name="state"
-            value={formData.state}
-            onChange={handleChange}
-          />
-        </label>
-        <br />
-        <label>
-          District:
-          <input
-            type="text"
-            name="district"
-            value={formData.district}
-            onChange={handleChange}
-          />
-        </label>
-        <br />
-        <label>
-          Station:
-          <input
-            type="text"
-            name="station"
-            value={formData.station}
-            onChange={handleChange}
-          />
-        </label>
-        <br />
-        <label>
-          Year:
-          <input
-            type="number"
-            name="year"
-            value={formData.year}
-            onChange={handleChange}
-          />
-        </label>
-        <br />
-        <label>
-          Month:
-          <input
-            type="number"
-            name="month"
-            value={formData.month}
-            onChange={handleChange}
-          />
-        </label>
-        <br />
-        <button type="submit" disabled={loading}>
-          {loading ? "Predicting..." : "Predict"}
-        </button>
-      </form>
+    <>
+      <div className="header">
+        <img src={logo} alt="Logo" className="logo" />
+        <h1>Ground water Level Prediction</h1>
+      </div>
 
-      {loading && <p>Loading prediction...</p>}
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
-      {prediction !== null && (
-        <div>
-          <h2>Predicted Groundwater Level: {prediction}</h2>
-        </div>
-      )}
-    </div>
+      <div className="container">
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>State:</label>
+            <input
+              type="text"
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>District:</label>
+            <input
+              type="text"
+              name="district"
+              value={formData.district}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>Station:</label>
+            <input
+              type="text"
+              name="station"
+              value={formData.station}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>Year:</label>
+            <input
+              type="number"
+              name="year"
+              value={formData.year}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>Month:</label>
+            <input
+              type="number"
+              name="month"
+              value={formData.month}
+              onChange={handleChange}
+              min={1}
+              max={12}
+            />
+          </div>
+          <button type="submit" disabled={loading}>
+            {loading ? "Predicting..." : "Predict"}
+          </button>
+        </form>
+
+        {loading && <p>Loading prediction...</p>}
+        {error && <p style={{ color: "red" }}>Error: {error}</p>}
+        {prediction !== null && (
+          <div>
+            <h2>Predicted Groundwater Level: {prediction}</h2>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
