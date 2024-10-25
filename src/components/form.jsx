@@ -130,23 +130,3 @@ function Form({ setUserLoc }) {
 }
 
 export default Form;
-
-//Get user location and set location in app file so that it is accesible in map element
-//app --> [ussserLocation, setUserLocation] state
-//<form setUserLocation = {setUserLocation}>
-//<map UserLocation = {UserLocation}>
-// const handleGetLocation = () => {
-//   if (navigator.geolocation) {
-//     navigator.geolocation.getCurrentPosition(
-//       (position) => {
-//         const { latitude, longitude } = position.coords;
-//         setUserLocation([latitude, longitude]);  // Update App state
-//       },
-//       (error) => {
-//         console.error("Error getting location: ", error);
-//       }
-//     );
-//   } else {
-//     console.error("Geolocation is not supported by this browser.");
-//   }
-// };
