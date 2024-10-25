@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
-import logo from "../assets/ecology.png";
 
-function Form() {
+function Form({ setUserLoc }) {
   const [formData, setFormData] = useState({
     state: "",
     district: "",
@@ -14,6 +13,22 @@ function Form() {
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLoc([latitude, longitude]); // Update App state
+        },
+        (error) => {
+          console.error("Error getting location: ", error);
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -44,11 +59,6 @@ function Form() {
 
   return (
     <>
-      <div className="header">
-        <img src={logo} alt="Logo" className="logo" />
-        <h1>Ground water Level Prediction</h1>
-      </div>
-
       <div className="container">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -70,7 +80,7 @@ function Form() {
             />
           </div>
           <div className="form-group">
-            <label>Station:</label>
+            <label>city</label>
             <input
               type="text"
               name="station"
@@ -98,16 +108,20 @@ function Form() {
               max={12}
             />
           </div>
-          <button type="submit" disabled={loading}>
-            {loading ? "Predicting..." : "Predict"}
-          </button>
+          <div className="button-section">
+            <button type="submit" disabled={loading}>
+              {loading ? "Predicting..." : "Predict"}
+            </button>
+            <button onClick={handleGetLocation}>Use Your Location</button>
+          </div>
         </form>
 
         {loading && <p>Loading prediction...</p>}
         {error && <p style={{ color: "red" }}>Error: {error}</p>}
         {prediction !== null && (
           <div>
-            <h2>Predicted Groundwater Level: {prediction}</h2>
+            <h2>Predicted Groundwater Level: {prediction.toFixed(2)} Mbgl</h2>
+            <h6>*Mbgl - meters below ground level</h6>
           </div>
         )}
       </div>
@@ -116,3 +130,23 @@ function Form() {
 }
 
 export default Form;
+
+//Get user location and set location in app file so that it is accesible in map element
+//app --> [ussserLocation, setUserLocation] state
+//<form setUserLocation = {setUserLocation}>
+//<map UserLocation = {UserLocation}>
+// const handleGetLocation = () => {
+//   if (navigator.geolocation) {
+//     navigator.geolocation.getCurrentPosition(
+//       (position) => {
+//         const { latitude, longitude } = position.coords;
+//         setUserLocation([latitude, longitude]);  // Update App state
+//       },
+//       (error) => {
+//         console.error("Error getting location: ", error);
+//       }
+//     );
+//   } else {
+//     console.error("Geolocation is not supported by this browser.");
+//   }
+// };
