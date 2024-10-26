@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import MapElement from "./MapElement";
+import MapElement from "./mapElement";
 import Form from "./form";
 
 function MapPage({setMapPosition }) {

@@ -10,7 +10,7 @@ function Form({ setUserLoc, setMapPosition }) {
   });
 
   const [indicator, setIndicator] = useState({});
-  const [prediction, setPrediction] = useState(null);
+  const [prediction, setPrediction] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
@@ -53,19 +53,24 @@ function Form({ setUserLoc, setMapPosition }) {
         lon: formData.lon,
       });
       const predictionValue = response.data.prediction;
-      setPrediction(predictionValue);
+      setUserLoc([formData.lat, formData.lon])
+      const predict_float = parseFloat(predictionValue.value)
+      setPrediction(predict_float);
+
 
       // Set indicator based on prediction
       let status, theme;
-      if (predictionValue < 3) {
+      if (predict_float < 3) {
         status = "EXCESS";
         theme = "green";
-      } else if (predictionValue < 15) {
+      } else if (predict_float>5 & predict_float < 15) {
         status = "NORMAL";
         theme = "blue";
-      } else {
+      } else if(predict_float >20) {
         status = "LOW";
         theme = "red";
+      }else{
+        status = "UNDEFINED";
       }
 
       setIndicator({ status, theme }); // Update indicator object
