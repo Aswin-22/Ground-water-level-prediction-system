@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import GraphComp from "./GraphComp";
 import GraphForm from "./GraphForm";
+import "../styles.css";
 
 function GraphPage() {
   const [graphData, setGraphData] = useState(null);

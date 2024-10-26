@@ -38,13 +38,13 @@
      gap: 15px; 
      
  }
- #navigation a{
+ #navigation link{
      position: relative;
      text-decoration: none;
      padding: 0 10px;
      color: var(--color1);
  }
- #navigation a::after {
+ #navigation link::after {
     content: '';
     position: absolute;
     left: 0;
@@ -54,7 +54,7 @@
     background-color: var(--color3);
     transition: width 0.5s ease;
 }
-#navigation a:hover::after
+#navigation link:hover::after
  {
     width: 100%;
  }

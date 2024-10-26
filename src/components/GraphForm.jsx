@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import "../styles.css";
 
 function GraphForm({ setGraphData }) {
   const [formData, setFormData] = useState({
@@ -88,8 +89,6 @@ function GraphForm({ setGraphData }) {
             name="startYear"
             value={formData.startYear}
             onChange={handleChange}
-            min="2000"
-            max="2024"
           />
         </div>
         <div className="form-group">
@@ -99,8 +98,6 @@ function GraphForm({ setGraphData }) {
             name="endYear"
             value={formData.endYear}
             onChange={handleChange}
-            min="2000"
-            max="2024"
           />
         </div>
         <button type="submit" disabled={loading}>

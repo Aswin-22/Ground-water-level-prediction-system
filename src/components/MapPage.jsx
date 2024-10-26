@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import MapElement from "./MapElement";
+import MapElement from "./mapElement";
 import Form from "./form";
+import "../styles.css";
 
 function MapPage({setMapPosition }) {
   const [userLoc, setUserLoc] = useState();

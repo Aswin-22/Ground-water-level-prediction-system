@@ -11,6 +11,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "leaflet";
 import loc from "../assets/locicon.png";
+import "../styles.css";
 
 // Child component to handle map flyTo user location
 const FlyToUserLocation = ({ userLoc }) => {
