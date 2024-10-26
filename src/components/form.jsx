@@ -7,21 +7,21 @@ function Form({ setUserLoc, setMapPosition }) {
   const [formData, setFormData] = useState({
     state: "",
     district: "",
-    station: "",
-    year: "",
-    month: "",
+    city: "",
+    lat: "",
+    lon: "",
   });
 
   const [indicator, setIndicator] = useState({});
-  const [prediction, setPrediction] = useState({});
+  const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
 
-  const apiKey = "pk.e56964b66a69241515576fd9bb159e02";
-
-  const getCoordinates = async (state, district) => {
-    const query = `Ambalapuzha, ${district}, ${state}`;
+  // Fetch coordinates based on state, district, and city
+  async function getCoordinates(state, district, city) {
+    const apiKey = "pk.e56964b66a69241515576fd9bb159e02";
+    const query = `${city}, ${district}, ${state}`;
     const url = `https://us1.locationiq.com/v1/search.php?key=${apiKey}&q=${encodeURIComponent(
       query
     )}&format=json`;
@@ -34,16 +34,16 @@ function Form({ setUserLoc, setMapPosition }) {
       const data = await response.json();
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
-        return { lat, lon };
+        setFormData((prevData) => ({ ...prevData, lat, lon })); // Set lat/lon in formData
+        setUserLoc([lat, lon]); // Update App state with user location
+        setMapPosition([lat, lon]); // Move map to fetched location
       } else {
         console.log("No results found for the specified location.");
-        return null;
       }
     } catch (error) {
       console.error("Error fetching the coordinates:", error);
-      return null;
     }
-  };
+  }
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
@@ -52,6 +52,7 @@ function Form({ setUserLoc, setMapPosition }) {
           const { latitude, longitude } = position.coords;
           setUserLoc([latitude, longitude]); // Update App state
           setMapPosition([latitude, longitude]); // Move map to user's location
+          setFormData({ lat: latitude, lon: longitude }); // Update form data
         },
         (error) => {
           console.error("Error getting location: ", error);
@@ -69,47 +70,52 @@ function Form({ setUserLoc, setMapPosition }) {
     });
   };
 
+  const handleCoordinateFetch = async (e) => {
+    e.preventDefault();
+    const { state, district, city } = formData;
+    if (state && district && city) {
+      await getCoordinates(state, district, city);
+    } else {
+      alert("Please enter State, District, and City to fetch coordinates.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.lat || !formData.lon) {
+      alert("Please fetch coordinates before submitting.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setPrediction(null);
 
     try {
-      // Get predicted groundwater level
-      const response = await axios.post(
-        "http://localhost:5000/predict",
-        formData
-      );
+      // Send latitude and longitude to the Flask server for prediction
+      const response = await axios.post("http://localhost:5000/predict", {
+        lat: formData.lat,
+        lon: formData.lon,
+      });
       const predictionValue = response.data.prediction;
-      setUserLoc([formData.lat, formData.lon])
-      const predict_float = parseFloat(predictionValue.value)
-      setPrediction(predict_float);
+      setPrediction(predictionValue);
 
+      const predict_float = parseFloat(predictionValue.value);
 
       // Set indicator based on prediction
       let status, theme;
       if (predict_float < 3) {
         status = "EXCESS";
         theme = "green";
-      } else if (predict_float>5 & predict_float < 15) {
+      } else if (predict_float < 15) {
         status = "NORMAL";
         theme = "blue";
-      } else if(predict_float >20) {
+      } else {
         status = "LOW";
         theme = "red";
-      }else{
-        status = "UNDEFINED";
       }
 
       setIndicator({ status, theme }); // Update indicator object
-
-      // Get coordinates of the location
-      const coords = await getCoordinates(formData.state, formData.district);
-      if (coords) {
-        setUserLoc([coords.lat, coords.lon]);
-        setMapPosition([coords.lat, coords.lon]); // Fly to location on map
-      }
       setIsModalOpen(true); // Open modal to show prediction
     } catch (error) {
       console.error("There was an error making the request!", error);
@@ -136,6 +142,7 @@ function Form({ setUserLoc, setMapPosition }) {
             name="state"
             value={formData.state}
             onChange={handleChange}
+            required
           />
         </div>
         <div className="form-group">
@@ -145,37 +152,23 @@ function Form({ setUserLoc, setMapPosition }) {
             name="district"
             value={formData.district}
             onChange={handleChange}
+            required
           />
         </div>
         <div className="form-group">
-          <label>Station:</label>
+          <label>City:</label>
           <input
             type="text"
-            name="station"
-            value={formData.station}
+            name="city"
+            value={formData.city}
             onChange={handleChange}
+            required
           />
         </div>
-        <div className="form-group">
-          <label>Year:</label>
-          <input
-            type="number"
-            name="year"
-            value={formData.year}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="form-group">
-          <label>Month:</label>
-          <input
-            type="number"
-            name="month"
-            value={formData.month}
-            onChange={handleChange}
-            min={1}
-            max={12}
-          />
-        </div>
+        <button type="button" onClick={handleCoordinateFetch}>
+          Fetch Coordinates
+        </button>
+
         <div className="button-section">
           <button type="submit" disabled={loading}>
             {loading ? "Predicting..." : "Predict"}
@@ -196,7 +189,7 @@ function Form({ setUserLoc, setMapPosition }) {
         indicator={indicator}
       />
 
-      
+      {/* Choropleth Legend at the bottom center */}
       <div className="legend-container">
         <div className="legend">
           <h3 style={{ color: "white" }}>Groundwater Level Indicators</h3>

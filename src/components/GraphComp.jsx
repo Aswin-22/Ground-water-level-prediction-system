@@ -22,23 +22,21 @@ ChartJS.register(
 
 function GraphComp({ graphData }) {
   const [labels, setLabels] = useState([
-    "Year 1",
-    "Year 2",
-    "Year 3",
-    "Year 4",
-    "Year 5",
-    "Year 6",
-    "Year 7",
-    "Year 8",
-    "Year 9",
-    "Year 10",
+    "year 1",
+    "year 2",
+    "year 3",
+    "year 4",
+    "year 5",
   ]);
-  const [data, setData] = useState([30, 40, 70, 80, 10, 70, 80, 10, 90, 80]);
+  const [data, setData] = useState([30, 40, 80, 87, 56]);
 
   useEffect(() => {
     if (graphData && graphData.length > 0) {
-      const newLabels = graphData.map(item => item.year);
-      const newData = graphData.map(item => item.prediction);
+      const newLabels = graphData.map(
+        (item, index) =>
+          `Location ${index + 1} (Lat: ${item.lat}, Lon: ${item.lon})`
+      );
+      const newData = graphData.map((item) => item.prediction);
       setLabels(newLabels);
       setData(newData);
     }
@@ -69,7 +67,7 @@ function GraphComp({ graphData }) {
     labels: labels,
     datasets: [
       {
-        label: "Groundwater Level",
+        label: "Groundwater Level Predictions",
         data: data,
         backgroundColor: "rgba(75, 192, 192, 0.6)",
         borderColor: "#1e293b",

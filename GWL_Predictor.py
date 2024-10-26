@@ -5,13 +5,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import train_test_split
 import requests
 pd.set_option('future.no_silent_downcasting', True)
 
-df = pd.read_excel(r'D:\GWL_Project_Folder\DataSets\full_data.xlsx')
+df = pd.read_excel(r'full_data.xlsx')
 
 df['precip']= df['precip'].replace(0, None)
 

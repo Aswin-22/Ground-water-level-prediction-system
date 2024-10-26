@@ -1,25 +1,25 @@
 // Navbar.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import {location} from "./images/location.png"
-import "../styles.css";
+import location from "../assets/location.png";
+import "../homestyle.css";
 
 function Navbar() {
   return (
-    <nav id="navigation">
+    <nav id="header">
       <div id="logo-container">
-            <img src={"./images/location.png"} alt="" width="50" />
-            <h1>HydroScope</h1>
-        </div>
-      <ul>
+        <img src={location} alt="" width="50" />
+        <h1>HydroScope</h1>
+      </div>
+      <ul id="navigation">
         <li>
-          <Link to="/">Home</Link>
+          <Link className="a" to="/">Home</Link>
         </li>
         <li>
-          <Link to="/map">Map</Link>
+          <Link className="a" to="/map">Map</Link>
         </li>
         <li>
-          <Link to="/graph">Graph</Link>
+          <Link className="a" to="/graph">Graph</Link>
         </li>
       </ul>
     </nav>

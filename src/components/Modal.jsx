@@ -8,7 +8,7 @@ const Modal = ({ isOpen, onClose, prediction, indicator }) => {
     <div className="modal-overlay">
       <div className="modal-content">
         <h2 style={{ color: "white" }}>Prediction Result</h2>
-        <p>Predicted Groundwater Level: {prediction !== null ? prediction.toFixed(2) : "N/A"} Mbgl</p>
+        <p>Predicted Groundwater Level: {prediction !== null ? prediction.value.toFixed(2) : "N/A"} Mbgl</p>
         <p>Condition is: {indicator.status || "N/A"}</p>
         <button onClick={onClose}>Close</button>
       </div>
