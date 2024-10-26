@@ -3,7 +3,9 @@ import axios from "axios";
 
 function GraphForm({ setGraphData }) {
   const [formData, setFormData] = useState({
-    location: "",
+    state: "",
+    district: "",
+    station: "",
     startYear: "",
     endYear: "",
   });
@@ -20,14 +22,30 @@ function GraphForm({ setGraphData }) {
     setError(null);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/predict",
-        formData
-      );
-      setGraphData(response.data);
+      // Prepare to collect predictions for each year in the range
+      const predictions = [];
+      const startYear = Number(formData.startYear);
+      const endYear = Number(formData.endYear);
+
+      if (startYear > endYear) {
+        throw new Error("Start Year must be less than or equal to End Year.");
+      }
+
+      for (let year = startYear; year <= endYear; year++) {
+        const response = await axios.post("http://localhost:5000/predict", {
+          state: formData.state,
+          district: formData.district,
+          station: formData.station,
+          year: year,
+          month: 1, // You can specify the month as needed
+        });
+        predictions.push({ year: year, prediction: response.data.prediction });
+      }
+
+      setGraphData(predictions);
     } catch (error) {
       console.error("Error fetching graph data:", error);
-      setError("An unexpected error occurred.");
+      setError(error.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -37,11 +55,29 @@ function GraphForm({ setGraphData }) {
     <div className="container">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Location:</label>
+          <label>State:</label>
           <input
             type="text"
-            name="location"
-            value={formData.location}
+            name="state"
+            value={formData.state}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="form-group">
+          <label>District:</label>
+          <input
+            type="text"
+            name="district"
+            value={formData.district}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="form-group">
+          <label>City:</label>
+          <input
+            type="text"
+            name="station"
+            value={formData.station}
             onChange={handleChange}
           />
         </div>
@@ -63,8 +99,8 @@ function GraphForm({ setGraphData }) {
             name="endYear"
             value={formData.endYear}
             onChange={handleChange}
-            min={formData.startYear}
-            max={parseInt(formData.startYear) + 10}
+            min="2000"
+            max="2024"
           />
         </div>
         <button type="submit" disabled={loading}>
