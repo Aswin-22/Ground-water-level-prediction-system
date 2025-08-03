@@ -96,6 +96,7 @@ function Form({ setUserLoc, setMapPosition }) {
       const response = await axios.post("http://localhost:5000/predict", {
         lat: formData.lat,
         lon: formData.lon,
+        state: formData.state
       });
       const predictionValue = response.data.prediction;
       setPrediction(predictionValue);
