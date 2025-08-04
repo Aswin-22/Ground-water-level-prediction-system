@@ -1,50 +1,37 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import numpy as np
-import GWL_Predictor as model  # Import your model for groundwater level prediction
+import GWL_Predictor as model
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/predict": {"origins": "http://localhost:5173"}})
 
-@app.route('/predict', methods=['POST', 'OPTIONS'])
+@app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'OPTIONS':
-        return jsonify({})
-
-    data = request.get_json()  # For debugging purposes
-
-    # Extract latitude and longitude and convert to float
+    data = request.get_json()
+    
+    # Validate input
+    if not data or 'lat' not in data or 'lon' not in data or 'state' not in data:
+        return jsonify({"error": "Missing required parameters"}), 400
+    
     try:
         latitude = float(data['lat'])
         longitude = float(data['lon'])
-    except ValueError as ve:
-        return jsonify({"error": "Invalid latitude or longitude format"}), 400
-
+        state = str(data['state'])
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid parameter format"}), 400
+    
     try:
-        # Make the prediction using the second model
-        prediction = model.predict_groundwater_Level(latitude, longitude)
-
-
-        # Ensure prediction is a tuple with a float and a string
-        if isinstance(prediction, tuple) and len(prediction) == 2:
-            return jsonify({
-                "prediction": {
-                    "value": prediction[0]  
-                }
-            })
-        else:
-            return jsonify({"error": "Invalid prediction format"}), 500
+        depth, category = model.predict_groundwater_level(latitude, longitude, state)
+        return jsonify({
+            "prediction": {
+                "value": depth,
+                "category": category,
+                "unit": "meters below ground",
+                "state": state
+            }
+        })
     except Exception as e:
-        print(f"Error in prediction with latitude/longitude: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-# Add CORS headers to every response
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

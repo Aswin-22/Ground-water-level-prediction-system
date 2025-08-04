@@ -1,139 +1,174 @@
-
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
-from sklearn.model_selection import train_test_split
 import requests
+import datetime
+import joblib
+
 pd.set_option('future.no_silent_downcasting', True)
 
-df = pd.read_excel(r'full_data.xlsx')
+# Load data
+df = pd.read_excel('full_data.xlsx')
 
-df['precip']= df['precip'].replace(0, None)
+# Preprocess precipitation
+df['precip'] = df['precip'].replace(0, np.nan).bfill().fillna(0.01)
 
-df['precip'] = df['precip'].bfill().infer_objects(copy=False)
-df['soil_moisture_proxy'] = df['precip'] * (df['humidity'] / 100) * (1 - df['solarradiation']/max(df['solarradiation']))
-df['groundwater_level_proxy'] = df['precip'] * (df['humidity'] / 100) * (1 - df['solarradiation'] / max(df['solarradiation']))
+# Calculate solar radiation max
+MAX_SOLAR_RADIATION = df['solarradiation'].max()
 
-# Example: converting 'datetime' column
+# Enhanced soil moisture calculation with geographical weighting
+df['soil_moisture_proxy'] = df['precip'] * (df['humidity']/100) * \
+                            np.sqrt(1 - df['solarradiation']/MAX_SOLAR_RADIATION)
+
+# State-based groundwater depth baselines (customize these per state)
+STATE_BASELINES = {
+    'kerala': 3.5,
+    'tamil nadu': 8.5,
+    'karnataka': 12.0,
+    'andhra pradesh': 10.0,
+    'telangana': 15.0,
+    'odisha': 7.0,
+    'default': 10.0
+}
+
+# Parse date
 df['datetime'] = pd.to_datetime(df['datetime'])
 df['month'] = df['datetime'].dt.month
 df['year'] = df['datetime'].dt.year
+df.drop(columns=['datetime'], inplace=True)
 
-df.drop(['datetime'], axis=1, inplace=True)
+# Create state-depth mapping
+df['state_baseline'] = df['name'].str.lower().map(STATE_BASELINES).fillna(STATE_BASELINES['default'])
 
-# Features and target
-X = df[['temp', 'humidity','precip','windspeed', 
-        'cloudcover', 'dew',  'solarradiation', 'soil_moisture_proxy', 'year']]
-y = df['groundwater_level_proxy']
+# Feature engineering
+df['temp_range'] = df['tempmax'] - df['tempmin']
+df['season'] = df['month'].apply(lambda m: 1 if m in [3,4,5] else 2 if m in [6,7,8,9] else 3)  # 1=summer, 2=monsoon, 3=winter
 
-# Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+# Feature matrix & target
+features = ['temp', 'humidity', 'precip', 'windspeed', 'cloudcover', 
+            'dew', 'solarradiation', 'year', 'month', 'state_baseline',
+            'temp_range', 'season']
+X = df[features]
+y = df['soil_moisture_proxy']
 
-# Scaling the features
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, shuffle=False, random_state=42)
 
-# Initialize the Random Forest Model
-rf = RandomForestRegressor(n_estimators=100, random_state=42)
+# Create preprocessor
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), ['temp', 'humidity', 'precip', 'windspeed', 
+                                   'cloudcover', 'dew', 'solarradiation', 'year',
+                                   'temp_range']),
+        ('cat', 'passthrough', ['month', 'season', 'state_baseline'])
+    ])
 
-# Train the model
-rf.fit(X_train_scaled, y_train)
+# Preprocess data
+X_train_processed = preprocessor.fit_transform(X_train)
+X_test_processed = preprocessor.transform(X_test)
 
-# Predict and evaluate
-y_pred_rf = rf.predict(X_test_scaled)
-r2_score(y_test, y_pred_rf)
+# Train model
+groundwater_model = RandomForestRegressor(
+    n_estimators=200,
+    min_samples_split=5,
+    max_depth=15,
+    random_state=42
+)
+groundwater_model.fit(X_train_processed, y_train)
 
-#weather data function
-def get_weather_data(lat, lon): 
-    api_key = '49357792e59c48d0af2122009242310'  # Replace with your API key
+# Calculate dynamic thresholds
+LOW_THRESHOLD = np.percentile(y_train, 33)
+HIGH_THRESHOLD = np.percentile(y_train, 66)
+
+print(f"Groundwater Model R²: {r2_score(y_test, groundwater_model.predict(X_test_processed)):.3f}")
+print(f"Dynamic Thresholds - Low: {LOW_THRESHOLD:.4f}, High: {HIGH_THRESHOLD:.4f}")
+
+# Save model and preprocessor
+joblib.dump(groundwater_model, 'groundwater_model.pkl')
+joblib.dump(preprocessor, 'preprocessor.pkl')
+
+# Weather API function
+def get_weather_data(lat, lon):
+    api_key = '49357792e59c48d0af2122009242310'
     url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={lat},{lon}"
-    response = requests.get(url).json()
-
-    temp = response['current']['temp_c']
-    humidity = response['current']['humidity']
-    precipitation = response['current']['precip_mm']
-    wind = response['current']['wind_mph']
-    cloud = response['current']['cloud']
-    dewpoint = response['current']['dewpoint_c']
-
-
-    return {
-        'temp': temp,
-        'humidity': humidity,
-        'precip': precipitation,
-        'wind':wind,
-        'cloud':cloud,
-        'dewpoint':dewpoint
-    }
-
-
-#calculate soil moisture
-def calculate_soil_moisture(precip, humidity, solar_radiation):
-        
-    soil_moisture_proxy = precip * (humidity / 100) * (1 - solar_radiation / max(1, solar_radiation))
     
-    return soil_moisture_proxy
+    try:
+        response = requests.get(url, timeout=10).json()
+        current = response['current']
+        return {
+            'temp': current['temp_c'],
+            'humidity': current['humidity'],
+            'precip': current['precip_mm'] or 0.01,
+            'windspeed': current['wind_mph'],
+            'cloudcover': current['cloud'],
+            'dew': current.get('dewpoint_c', current['temp_c'])
+        }
+    except Exception as e:
+        print(f"Weather API Error: {e}")
+        # Return average values as fallback
+        return {
+            'temp': 28.5, 
+            'humidity': 65,
+            'precip': 5.0,
+            'windspeed': 12.0,
+            'cloudcover': 50,
+            'dew': 22.0
+        }
 
-
-#solar radiation model
-X1 = X.drop(['solarradiation','soil_moisture_proxy','year'],axis=1)
-y=X['solarradiation']
-X_train, X_test, y_train, y_test = train_test_split(X1, y, test_size=0.2, random_state=42)
-model = RandomForestRegressor(n_estimators=100)
-
-model.fit(X_train,y_train)
-
-#function to predict
-def predict_groundwater_Level(lat, lon):
-
-    weather_data = get_weather_data(lat, lon)
-    if weather_data is None:
-        print("Error: Weather data could not be retrieved.")
-        return None
+# Prediction function
+def predict_groundwater_level(lat, lon, state):
+    # Get current weather
+    weather = get_weather_data(lat, lon)
+    current_date = datetime.datetime.now()
     
-    solar_radiation = model.predict([[weather_data['temp'], 
-        weather_data['humidity'], 
-        weather_data['precip'], 
-        weather_data['wind'],
-        weather_data['cloud'],
-        weather_data['dewpoint']]])[0]
-
-    soil_moisture_proxy = calculate_soil_moisture(
-        weather_data['precip'], 
-        weather_data['humidity'], 
-        solar_radiation
-    )
+    # Get state baseline
+    state_lower = state.lower()
+    state_baseline = STATE_BASELINES.get(state_lower, STATE_BASELINES['default'])
     
-
-    features = np.array([[
-        weather_data['temp'], 
-        weather_data['humidity'], 
-        weather_data['precip'], 
-        weather_data['wind'],
-        weather_data['cloud'],
-        weather_data['dewpoint'],
-        solar_radiation,
-        soil_moisture_proxy,
-        2024
-    ]]).reshape(1, -1)
+    # Calculate temp range (estimate)
+    temp_range = 8 + (weather['temp'] - 25) * 0.3  # Higher temps → wider range
     
-
-    scaled_features = scaler.transform(features)
-
-    y_pred = rf.predict(scaled_features)[0]
-
-    y_pred_str = str(y_pred)[:6] 
-    y_pred = float(y_pred_str) 
-
-    if y_pred < 3:
-        return y_pred,"EXCESS"
-    elif y_pred >5 & y_pred < 15:
-        return y_pred,"NORMAL"
-    elif y_pred >20:
-        return y_pred,"LOW"
+    # Determine season
+    month = current_date.month
+    season = 1 if month in [3,4,5] else 2 if month in [6,7,8,9] else 3
     
-
+    # Prepare feature vector
+    features = pd.DataFrame([{
+        'temp': weather['temp'],
+        'humidity': weather['humidity'],
+        'precip': weather['precip'],
+        'windspeed': weather['windspeed'],
+        'cloudcover': weather['cloudcover'],
+        'dew': weather['dew'],
+        'solarradiation': MAX_SOLAR_RADIATION * (1 - weather['cloudcover']/100) * 0.8,  # Estimate
+        'year': current_date.year,
+        'month': month,
+        'state_baseline': state_baseline,
+        'temp_range': temp_range,
+        'season': season
+    }])
+    
+    # Preprocess features
+    processed_features = preprocessor.transform(features)
+    
+    # Predict proxy value
+    proxy_value = groundwater_model.predict(processed_features)[0]
+    
+    # Convert to depth (Mbgl) - higher proxy → shallower depth
+    depth = state_baseline * (2 - min(1.5, max(0.5, proxy_value * 2)))
+    depth = max(1.0, min(25.0, depth))
+    
+    # Classification
+    if depth < 5:
+        category = "EXCESS"
+    elif depth < 15:
+        category = "NORMAL"
+    else:
+        category = "LOW"
+    
+    return round(depth, 2), category
