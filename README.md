@@ -18,5 +18,7 @@ This project predicts groundwater level indicators (EXCESS / NORMAL / LOW) based
   - LocationIQ
   - WeatherAPI
 
+## License
 
+Licensed under the [MIT License](LICENSE).
 
