@@ -24,6 +24,6 @@ Licensed under the [MIT License](LICENSE).
 
 ## How to run
 
--Open CMD in file location
--Run  npm i
--Run  npm run dev
+- Open CMD in file location
+- Run  npm i
+- Run  npm run dev
