@@ -22,3 +22,8 @@ This project predicts groundwater level indicators (EXCESS / NORMAL / LOW) based
 
 Licensed under the [MIT License](LICENSE).
 
+## How to run
+
+-Open CMD in file location
+-Run  npm i
+-Run  npm run dev
